@@ -1,5 +1,5 @@
 class Snake {
-  constructor(size, padding, radius) {
+  constructor(size, padding, radius, unitColorStart, unitColorEnd, snakeColorStart, snakeColorEnd, fruitColorStart, fruitColorEnd) {
     this.size = size;
     this.padding = padding;
     this.radius = radius;
@@ -7,11 +7,23 @@ class Snake {
     this.availableUnits = [];
     this.qtdRowUnits = 0;
     this.score = 0;
+    this.unitColor = {
+      start: unitColorStart,
+      end: unitColorEnd,
+    }
+    this.fruitColor = {
+      start: fruitColorStart,
+      end: fruitColorEnd,
+    },
     this.snake = {
-      head: "4-15",
-      tail: "4-16",
-      body: ["4-15", "4-16"],
-      direction: "left",
+      head: "0-0",
+      tail: "0-1",
+      body: [ "0-1","0-0"],
+      direction: "right",
+      color:{
+        start: snakeColorStart,
+        end: snakeColorEnd
+      }
     };
   }
 
@@ -36,7 +48,7 @@ class Snake {
       for (let j = 0; j < qtdRowUnits; j++) {
         const id = `${i}-${j}`;
         this.availableUnits.push(id);
-        row += `<div id="${id}"class='units rounded${this.radius}' style="width:${this.size}px;height:${this.size}px"></div>`;
+        row += `<div id="${id}"class='units bg-gradient-to-br from-${this.unitColor.start} to-${this.unitColor.end} rounded${this.radius}' style="width:${this.size}px;height:${this.size}px"></div>`;
       }
       row += "</div>";
       rows.push(row);
@@ -50,7 +62,9 @@ class Snake {
   setFruitPosition() {
     const id = this.getRandomAvailableUnit();
     this.fruit = id;
-    document.getElementById(id).classList.add("fruit");
+    console.log(this.fruitColor);
+    document.getElementById(id).classList.add(`from-${this.fruitColor.start}`);
+    document.getElementById(id).classList.add(`to-${this.fruitColor.end}`);
   }
 
   setSnakeInitialPosition() {
@@ -102,9 +116,11 @@ class Snake {
   }
   setSnakeBody(id) {
     const classList = document.getElementById(id).classList;
-    classList.add("snake");
-    if (classList.contains("fruit")) {
-      classList.remove("fruit");
+    classList.add(`from-${this.snake.color.start}`);
+    classList.add(`to-${this.snake.color.end}`);
+    if (classList.contains(`from-${this.fruitColor.start}`)) {
+      classList.remove(`from-${this.fruitColor.start}`);
+      classList.remove(`to-${this.fruitColor.end}`);
       this.setFruitPosition();
       let score = this.score + 1;
       this.setScore(score);
@@ -113,7 +129,8 @@ class Snake {
   removeOldTail() {
     const tail = this.snake.body[this.snake.body.length - 1];
     this.snake.body.pop();
-    document.getElementById(tail).classList.remove("snake");
+    document.getElementById(tail).classList.remove(`from-${this.snake.color.start}`);
+    document.getElementById(tail).classList.remove(`to-${this.snake.color.end}`);
   }
   getRandomAvailableUnit(available) {
     if (!available) {
@@ -151,8 +168,17 @@ class Snake {
         }`;
         break;
     }
-    if (this.checkGameOver()) {
-      return false;
+    const gameOver = this.checkGameOver();
+    if (!!gameOver) {
+      const bestScore = window.sessionStorage.getItem("best-score");
+      if(bestScore === null){
+        window.sessionStorage.setItem("best-score", this.score);
+      }
+      else if (this.score > parseInt(bestScore, 10)) {
+        window.sessionStorage.setItem("best-score", this.score);
+      }
+      window.sessionStorage.setItem("score", this.score);
+      return gameOver;
     }
     const oldScore = this.score;
     this.snake.body.unshift(this.snake.head);
@@ -175,24 +201,24 @@ class Snake {
     const head = this.snake.head;
     const headParts = head.split("-");
     try{
-
-      if (document.getElementById(head).classList.contains("snake")) {
-        // debugger;
-        console.log("game over\n\n Bateu em si mesmo");
-        return true;
+      if (isNaN(headParts[0]) || isNaN(headParts[1])) {
+        return "Você bateu na parede";
+      }
+      else if(document.getElementById(`${head}`) == null){
+        return "Você bateu na parede";
+      } 
+      else if (this.snake.body.includes(head, 2)) {
+        return "Você bateu em si mesmo";
       } else if (headParts[0] < 0 || headParts[0] > this.qtdRowUnits) {
-        // debugger;
-        console.log("game over\n\n Bateu na parede");
-        return true;
+        return "Você bateu na parede";
       } else if (headParts[1] < 0 || headParts[1] > this.qtdColUnits) {
-        console.log("game over\n\n Bateu na parede");
-        return true;
+        return "Você bateu na parede";
       } else {
         return false;
       }
     }catch(err){
       console.log("game over\n\n Bateu na parede");
-      return true;
+      return "Ocorreu um erro";
     }
   }
 }
